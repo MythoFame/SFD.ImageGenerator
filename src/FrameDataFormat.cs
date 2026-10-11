@@ -3,7 +3,7 @@ using Eto.Drawing;
 namespace SFD.ImageGenerator;
 
 /// <summary>
-/// Encoder for the Commands++ frame data format v1:
+/// Encoder for the frame data format v1 (as implemented by Commands++):
 /// one Base64 frame per animation frame, frames joined by "_".
 /// Each frame decodes to width u32 LE + height u32 LE + w*h*4 RGBA bytes,
 /// row-major, top-left origin, alpha preserved.
