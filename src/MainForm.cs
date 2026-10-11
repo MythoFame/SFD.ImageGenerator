@@ -55,10 +55,7 @@ public sealed class MainForm : Form
         browseButton.Click += (_, _) => BrowseForImage();
 
         var okButton = new Button { Text = "OK" };
-        okButton.Click += (_, _) =>
-        {
-            // TODO: next step — implement OK action.
-        };
+        okButton.Click += (_, _) => OnOk();
 
         var cancelButton = new Button { Text = "Cancel" };
         cancelButton.Click += (_, _) => OnCancel();
@@ -162,6 +159,51 @@ public sealed class MainForm : Form
             ClearImage();
         else
             Application.Instance.Quit();
+    }
+
+    private void OnOk()
+    {
+        if (_currentImage is null)
+        {
+            MessageBox.Show(this, "No image loaded. Drop an image or click Browse… first.",
+                "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Information);
+            return;
+        }
+
+        string output;
+        try
+        {
+            output = FrameDataFormat.EncodeFrame(_currentImage);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Could not encode image:\n{ex.Message}",
+                "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Error);
+            return;
+        }
+
+        string path;
+        bool usedFallback;
+        try
+        {
+            path = ScriptDataFile.Write(output, out usedFallback);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Could not write output file:\n{ex.Message}",
+                "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Error);
+            return;
+        }
+
+        var size = _currentImage.Size;
+        var note = size.Width > 128 || size.Height > 128
+            ? "\n\nNote: larger than the recommended 128x128 (each pixel is a live game object)."
+            : string.Empty;
+        var fallbackNote = usedFallback
+            ? "\n\nShared folder not found, wrote beside the application instead."
+            : string.Empty;
+        MessageBox.Show(this, $"Wrote {output.Length} characters to:\n{path}{note}{fallbackNote}",
+            "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Information);
     }
 
     private void BrowseForImage()
