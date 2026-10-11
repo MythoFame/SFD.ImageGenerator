@@ -22,8 +22,6 @@ public sealed record SaveResult(
 ///   string|Image.1|&lt;base64 frames&gt;
 ///   ...
 /// Each OK press appends the current image as the next free index.
-/// A legacy single entry ("string|Image|...") counts as one stored image and
-/// is migrated to indexed form ("string|Image.0|...") on the next save.
 /// </summary>
 public static class ScriptDataFile
 {
@@ -31,7 +29,6 @@ public static class ScriptDataFile
 
     private const string HeaderLine = "v.1.0.0.0|UTF8| foo";
     private const string EntryPrefix = "string|Image.";
-    private const string LegacyEntryPrefix = "string|Image|";
 
     /// <summary>
     /// The game's Shared script-data directory, or null when it doesn't exist.
@@ -91,8 +88,8 @@ public static class ScriptDataFile
     }
 
     /// <summary>
-    /// Reads the stored payloads in file order. Accepts indexed entries
-    /// ("string|Image.N|...") and one legacy entry ("string|Image|...").
+    /// Reads the stored payloads in index order. Only indexed entries
+    /// ("string|Image.N|...") are accepted.
     /// </summary>
     internal static List<string> ParsePayloads(string content)
     {
@@ -102,38 +99,22 @@ public static class ScriptDataFile
 
         // Keep entries sorted by index so a hand-edited file still appends sanely.
         var indexed = new SortedDictionary<int, string>();
-        var legacy = new List<string>();
         for (var i = 1; i < lines.Length; i++)
         {
             var line = lines[i];
-            if (line.StartsWith(EntryPrefix, StringComparison.Ordinal))
-            {
-                var rest = line[EntryPrefix.Length..];
-                var sep = rest.IndexOf('|');
-                if (sep < 1 || !int.TryParse(rest[..sep], out var index) || index < 0)
-                    throw new InvalidDataException($"Existing imgdump.txt has a malformed entry on line {i + 1}.");
-                var payload = rest[(sep + 1)..];
-                if (payload.Length == 0)
-                    throw new InvalidDataException($"Existing imgdump.txt has an empty entry on line {i + 1}.");
-                indexed[index] = payload;
-            }
-            else if (line.StartsWith(LegacyEntryPrefix, StringComparison.Ordinal))
-            {
-                var payload = line[LegacyEntryPrefix.Length..];
-                if (payload.Length == 0)
-                    throw new InvalidDataException($"Existing imgdump.txt has an empty entry on line {i + 1}.");
-                legacy.Add(payload);
-            }
-            else
-            {
+            if (!line.StartsWith(EntryPrefix, StringComparison.Ordinal))
                 throw new InvalidDataException($"Existing imgdump.txt has a malformed entry on line {i + 1}.");
-            }
+
+            var rest = line[EntryPrefix.Length..];
+            var sep = rest.IndexOf('|');
+            if (sep < 1 || !int.TryParse(rest[..sep], out var index) || index < 0)
+                throw new InvalidDataException($"Existing imgdump.txt has a malformed entry on line {i + 1}.");
+            var payload = rest[(sep + 1)..];
+            if (payload.Length == 0)
+                throw new InvalidDataException($"Existing imgdump.txt has an empty entry on line {i + 1}.");
+            indexed[index] = payload;
         }
 
-        // Legacy entries keep their file order first, then indexed ones by index.
-        var payloads = new List<string>(legacy.Count + indexed.Count);
-        payloads.AddRange(legacy);
-        payloads.AddRange(indexed.Values);
-        return payloads;
+        return [.. indexed.Values];
     }
 }
