@@ -21,10 +21,12 @@ public sealed class MainForm : Form
 
     private readonly Panel _dropPanel = new();
     private readonly Drawable _preview = new();
+    private readonly UITimer _animationTimer = new();
 
-    private Bitmap? _currentImage;
+    private readonly List<ImageFrame> _frames = [];
+    private int _frameIndex;
 
-    private bool HasImage => _currentImage is not null;
+    private bool HasImage => _frames.Count > 0;
 
     public MainForm()
     {
@@ -42,6 +44,9 @@ public sealed class MainForm : Form
         _preview.AllowDrop = true;
         _preview.Paint += OnPreviewPaint;
         _preview.SizeChanged += (_, _) => _preview.Invalidate();
+
+        // Animated images cycle their frames on the UI thread.
+        _animationTimer.Elapsed += (_, _) => AdvanceFrame();
 
         // Drag & drop wiring (panel + preview, as events go to the control under the cursor).
         foreach (var control in new Control[] { _dropPanel, _preview })
@@ -86,7 +91,7 @@ public sealed class MainForm : Form
         var area = new RectangleF(0, 0, _preview.Width, _preview.Height);
         e.Graphics.FillRectangle(Colors.WhiteSmoke, area);
 
-        var image = _currentImage;
+        var image = HasImage ? _frames[_frameIndex].Image : null;
         if (image is null)
         {
             DrawPlaceholder(e.Graphics, area);
@@ -144,7 +149,7 @@ public sealed class MainForm : Form
         // Dropped bitmap (e.g. from a browser) takes precedence.
         if (e.Data.ContainsImage && e.Data.Image is Bitmap dropped)
         {
-            SetImage(new Bitmap(dropped));
+            SetImages([new ImageFrame(new Bitmap(dropped), TimeSpan.Zero)]);
             return;
         }
 
@@ -163,7 +168,7 @@ public sealed class MainForm : Form
 
     private void OnOk()
     {
-        if (_currentImage is null)
+        if (!HasImage)
         {
             MessageBox.Show(this, "No image loaded. Drop an image or click Browse… first.",
                 "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Information);
@@ -173,7 +178,7 @@ public sealed class MainForm : Form
         string output;
         try
         {
-            output = FrameDataFormat.EncodeFrame(_currentImage);
+            output = FrameDataFormat.EncodeFrames(_frames.Select(f => f.Image));
         }
         catch (Exception ex)
         {
@@ -195,7 +200,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        var size = _currentImage.Size;
+        var size = _frames[0].Image.Size;
         var note = size.Width > 128 || size.Height > 128
             ? "\n\nNote: larger than the recommended 128x128 (each pixel is a live game object)."
             : string.Empty;
@@ -225,7 +230,7 @@ public sealed class MainForm : Form
     {
         try
         {
-            SetImage(new Bitmap(path));
+            SetImages(ImageLoader.Load(path));
         }
         catch (Exception ex)
         {
@@ -234,17 +239,40 @@ public sealed class MainForm : Form
         }
     }
 
-    private void SetImage(Bitmap image)
+    private void SetImages(IReadOnlyList<ImageFrame> frames)
     {
-        _currentImage?.Dispose();
-        _currentImage = image;
+        ClearFrames();
+        _frames.AddRange(frames);
+        _frameIndex = 0;
+        if (_frames.Count > 1)
+        {
+            _animationTimer.Interval = IntervalSeconds(_frames[0].Delay);
+            _animationTimer.Start();
+        }
         _preview.Invalidate();
     }
 
-    private void ClearImage()
+    private void AdvanceFrame()
     {
-        _currentImage?.Dispose();
-        _currentImage = null;
+        if (_frames.Count < 2)
+            return;
+        _frameIndex = (_frameIndex + 1) % _frames.Count;
+        _animationTimer.Interval = IntervalSeconds(_frames[_frameIndex].Delay);
+        _preview.Invalidate();
+    }
+
+    private static double IntervalSeconds(TimeSpan delay) =>
+        Math.Max(delay.TotalSeconds, 0.01);
+
+    private void ClearImage() => ClearFrames();
+
+    private void ClearFrames()
+    {
+        _animationTimer.Stop();
+        foreach (var frame in _frames)
+            frame.Image.Dispose();
+        _frames.Clear();
+        _frameIndex = 0;
         _preview.Invalidate();
     }
 
@@ -284,8 +312,7 @@ public sealed class MainForm : Form
 
     protected override void OnUnLoad(EventArgs e)
     {
-        _currentImage?.Dispose();
-        _currentImage = null;
+        ClearFrames();
         base.OnUnLoad(e);
     }
 }
