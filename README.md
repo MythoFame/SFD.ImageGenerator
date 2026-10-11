@@ -39,3 +39,5 @@ Worked example; 2×2, top row red/green, bottom row blue/white (20 bytes → 28 
 ```
 AgAAAAIAAAD/AAAA/wAAAP////8=
 ```
+
+A reference decoder/renderer implementation is available in [SFD.Scripting.Resources](https://github.com/MythoFame/SFD.Scripting.Resources) (`Utils/ImageHelper.cs`).
