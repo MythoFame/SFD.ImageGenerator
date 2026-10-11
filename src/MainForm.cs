@@ -176,9 +176,12 @@ public sealed class MainForm : Form
         }
 
         string output;
+        int frameCount;
         try
         {
-            output = FrameDataFormat.EncodeFrames(_frames.Select(f => f.Image));
+            var images = _frames.Select(f => f.Image).ToList();
+            output = FrameDataFormat.EncodeFrames(images);
+            frameCount = images.Count;
         }
         catch (Exception ex)
         {
@@ -187,11 +190,10 @@ public sealed class MainForm : Form
             return;
         }
 
-        string path;
-        bool usedFallback;
+        SaveResult saved;
         try
         {
-            path = ScriptDataFile.Write(output, out usedFallback);
+            saved = ScriptDataFile.Append(output);
         }
         catch (Exception ex)
         {
@@ -201,13 +203,19 @@ public sealed class MainForm : Form
         }
 
         var size = _frames[0].Image.Size;
+        var action = saved.Created ? "Created" : "Appended to";
+        var imageWord = frameCount == 1 ? "frame" : "frames";
+        var totalWord = saved.TotalImages == 1 ? "image" : "images";
         var note = size.Width > 128 || size.Height > 128
             ? "\n\nNote: larger than the recommended 128x128 (each pixel is a live game object)."
             : string.Empty;
-        var fallbackNote = usedFallback
+        var fallbackNote = saved.UsedFallback
             ? "\n\nShared folder not found, wrote beside the application instead."
             : string.Empty;
-        MessageBox.Show(this, $"Wrote {output.Length} characters to:\n{path}{note}{fallbackNote}",
+        MessageBox.Show(this,
+            $"{action} imgdump.txt with image {saved.Index} " +
+            $"({output.Length} characters, {size.Width}x{size.Height}, {frameCount} animation {imageWord}).\n\n" +
+            $"Total {totalWord} in file: {saved.TotalImages}.\nPath:\n{saved.Path}{note}{fallbackNote}",
             "SFD Image Generator", MessageBoxButtons.OK, MessageBoxType.Information);
     }
 

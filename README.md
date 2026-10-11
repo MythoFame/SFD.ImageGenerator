@@ -10,7 +10,7 @@ Desktop GUI that converts images into frame data for pixel rendering in Superfig
 
 </div>
 
-Drop an image (or pick one with Browse), press OK, and the tool writes `imgdump.txt` in the game's Shared script storage, ready to be rendered on a BgText/Text canvas by a script.
+Drop an image (or pick one with Browse), press OK, and the tool appends it to `imgdump.txt` in the game's Shared script storage, ready to be rendered on a BgText/Text canvas by a script. Each save adds the image as the next entry (`string|Image.0|…`, `string|Image.1|…`, …).
 
 ## 🚀 Installation
 
