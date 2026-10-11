@@ -30,12 +30,12 @@ Layers, outside in:
 |--------|-----------|--------------------------------------------------------------|
 | 0      | u32       | width (≥ 1)                                                  |
 | 4      | u32       | height (≥ 1)                                                 |
-| 8      | w × h × 4 | pixels, top row first, left to right, RGBA order, alpha 0-255 preserved |
+| 8      | w × h × 3 | pixels, top row first, left to right, RGB order (no alpha; text objects don't support transparency) |
 
-Decoder validation (reject with chat error, decode nothing): Base64 must parse; decoded length must equal exactly `8 + w*h*4`; w,h ≥ 1. Payload beyond that is an error, not ignored.
+Decoder validation (reject with chat error, decode nothing): Base64 must parse; decoded length must equal exactly `8 + w*h*3`; w,h ≥ 1. Payload beyond that is an error, not ignored.
 
-Worked example; 2×2, top row red/green, bottom row blue/white, all opaque (24 bytes → 32 chars):
+Worked example; 2×2, top row red/green, bottom row blue/white (20 bytes → 28 chars):
 
 ```
-AgAAAAIAAAD/AAD/AP8A/wAA////////
+AgAAAAIAAAD/AAAA/wAAAP////8=
 ```

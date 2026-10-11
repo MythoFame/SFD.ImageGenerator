@@ -5,8 +5,9 @@ namespace SFD.ImageGenerator;
 /// <summary>
 /// Encoder for the frame data format v1 (as implemented by Commands++):
 /// one Base64 frame per animation frame, frames joined by "_".
-/// Each frame decodes to width u32 LE + height u32 LE + w*h*4 RGBA bytes,
-/// row-major, top-left origin, alpha preserved.
+/// Each frame decodes to width u32 LE + height u32 LE + w*h*3 RGB bytes,
+/// row-major, top-left origin. Alpha is not stored (text objects
+/// don't support transparency); source alpha is ignored.
 /// </summary>
 public static class FrameDataFormat
 {
@@ -19,7 +20,7 @@ public static class FrameDataFormat
         if (width < 1 || height < 1)
             throw new InvalidOperationException($"Image must be at least 1x1 pixels (got {width}x{height}).");
 
-        var blob = new byte[8 + ((long)width * height * 4)];
+        var blob = new byte[8 + ((long)width * height * 3)];
 
         WriteUInt32LE(blob, 0, unchecked((uint)width));
         WriteUInt32LE(blob, 4, unchecked((uint)height));
@@ -33,7 +34,6 @@ public static class FrameDataFormat
                 blob[offset++] = ToChannel(color.R);
                 blob[offset++] = ToChannel(color.G);
                 blob[offset++] = ToChannel(color.B);
-                blob[offset++] = ToChannel(color.A);
             }
         }
 
