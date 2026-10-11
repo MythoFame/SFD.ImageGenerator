@@ -42,7 +42,7 @@ public static class ImageLoader
         }
     }
 
-    private static IReadOnlyList<ImageFrame> LoadGif(string path)
+    private static List<ImageFrame> LoadGif(string path)
     {
         try
         {
@@ -93,9 +93,9 @@ public static class ImageLoader
         if (rgba.Length != width * height * 4)
             throw new InvalidDataException("Unexpected GIF frame stride.");
 
-        var colors = new Eto.Drawing.Color[rgba.Length / 4];
+        var colors = new Color[rgba.Length / 4];
         for (var i = 0; i < colors.Length; i++)
-            colors[i] = new Eto.Drawing.Color(
+            colors[i] = new Color(
                 rgba[i * 4] / 255f, rgba[i * 4 + 1] / 255f,
                 rgba[i * 4 + 2] / 255f, rgba[i * 4 + 3] / 255f);
 
