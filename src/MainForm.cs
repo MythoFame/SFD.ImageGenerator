@@ -210,7 +210,7 @@ public sealed class MainForm : Form
             ? "\n\nNote: larger than the recommended 128x128 (each pixel is a live game object)."
             : string.Empty;
         var fallbackNote = saved.UsedFallback
-            ? "\n\nShared folder not found, wrote beside the application instead."
+            ? "\n\nGame folder not found in Documents, wrote beside the application instead."
             : string.Empty;
         MessageBox.Show(this,
             $"{action} imgdump.txt with image {saved.Index} " +

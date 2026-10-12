@@ -14,8 +14,10 @@ public sealed record SaveResult(
 
 /// <summary>
 /// Writes encoded image payloads as imgdump.txt for the game's
-/// Shared script storage. Primary location is the game's Shared folder;
-/// falls back to the application directory when it doesn't exist.
+/// Shared script storage. When the game's Documents folder exists, the
+/// Shared folder is created if needed (so fresh game data works) and used;
+/// otherwise the file goes beside the application, so no stray folders are
+/// created on systems where the game lives elsewhere.
 /// File content (UTF-8, no BOM, no trailing newline):
 ///   v.1.0.0.0|UTF8| foo
 ///   string|Image.0|&lt;base64 frames&gt;
@@ -31,16 +33,24 @@ public static class ScriptDataFile
     private const string EntryPrefix = "string|Image.";
 
     /// <summary>
-    /// The game's Shared script-data directory, or null when it doesn't exist.
+    /// The game's Shared script-data directory, created on demand.
+    /// Returns null when the game's Documents folder doesn't exist, so the
+    /// caller falls back to the application directory instead of creating
+    /// stray folders. Throws when the folder exists but can't be created.
     /// </summary>
     public static string? SharedDirectory
     {
         get
         {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "Superfighters Deluxe", "Cache", "ScriptData", "Shared");
-            return Directory.Exists(dir) ? dir : null;
+            var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            if (string.IsNullOrEmpty(documents))
+                return null;
+            var game = Path.Combine(documents, "Superfighters Deluxe");
+            if (!Directory.Exists(game))
+                return null;
+            var shared = Path.Combine(game, "Cache", "ScriptData", "Shared");
+            Directory.CreateDirectory(shared);
+            return shared;
         }
     }
 
